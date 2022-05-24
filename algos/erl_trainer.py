@@ -1,4 +1,4 @@
-
+﻿
 import numpy as np, os, time, random, torch, sys
 from algos.neuroevolution import SSNE
 from core import utils
@@ -67,6 +67,8 @@ class ERL_Trainer:
 		self.test_task_pipes = [Pipe() for _ in range(args.num_test)]
 		self.test_result_pipes = [Pipe() for _ in range(args.num_test)]
 		self.test_workers = [Process(target=rollout_worker, args=(id, 'test', self.test_task_pipes[id][1], self.test_result_pipes[id][0], False, self.test_bucket, env_constructor)) for id in range(args.num_test)]
+		#20220520 底下一行配合測試時選模型
+		#self.test_workers = [Process(target=rollout_worker, args=(id, 'test', self.test_task_pipes[id][1], self.test_result_pipes[id][0], True, self.test_bucket, env_constructor)) for id in range(args.num_test)]
 		for worker in self.test_workers: worker.start()
 		self.test_flag = False
 
@@ -93,7 +95,7 @@ class ERL_Trainer:
 		#Start Test rollouts
 		if gen % self.args.test_frequency == 0:
 			self.test_flag = True
-			for pipe in self.test_task_pipes: pipe[0].send(0)
+			for pipe in self.test_task_pipes: pipe[0].send(0) #20200520 pipe的物件結構為tuple- (connection, connection)
 
 
 		############# UPDATE PARAMS USING GRADIENT DESCENT ##########
@@ -109,8 +111,10 @@ class ERL_Trainer:
 		all_fitness = []; all_eplens = []
 		if self.args.pop_size > 1:
 			for i in range(self.args.pop_size):
-				_, fitness, frames, trajectory = self.evo_result_pipes[i][1].recv()
-
+				s, fitness, frames, trajectory = self.evo_result_pipes[i][1].recv()#frames: 在MC為200; trajectory包含state,state_n,action,action_n,reward
+				#print('LLL  L113: ',trajectory[199][0][0,0])#trajectory[199]為MC未成功的最後一筆軌跡紀錄,應該可用此點改變fitness
+				#fitness += 100*trajectory[-1][0][0,0] #可使Gen_max_score提前, 但Champ_len卻延後
+				#if len(trajectory) > 200: fitness -= 5*len(trajectory)#My Code- 無法縮短交易長度_20220518
 				all_fitness.append(fitness); all_eplens.append(frames)
 				self.gen_frames+= frames; self.total_frames += frames
 				self.replay_buffer.add(trajectory)
@@ -126,23 +130,23 @@ class ERL_Trainer:
 				self.gen_frames += pg_frames; self.total_frames += pg_frames
 				self.best_score = max(self.best_score, fitness)
 				gen_max = max(gen_max, fitness)
-				rollout_fitness.append(fitness); rollout_eplens.append(pg_frames)
-
+				rollout_fitness.append(fitness); rollout_eplens.append(pg_frames)#MC中rollout_fitness始終為[-200,-200]- 不知為何值不會改善???
+				#print('LLLLLLLLLLLLLLLLLLLLLLLLLLLLLL L130: ',rollout_fitness) #cartpole會改善,但比gen_max慢
 		######################### END OF PARALLEL ROLLOUTS ################
 
 		############ FIGURE OUT THE CHAMP POLICY AND SYNC IT TO TEST #############
 		if self.args.pop_size > 1:
 			champ_index = all_fitness.index(max(all_fitness))
-			utils.hard_update(self.test_bucket[0], self.population[champ_index])
+			utils.hard_update(self.test_bucket[0], self.population[champ_index])#self.population[champ_index]為網路結構(f1,f2,val,adv)
 			if max(all_fitness) > self.best_score:
 				self.best_score = max(all_fitness)
 				utils.hard_update(self.best_policy, self.population[champ_index])
 				torch.save(self.population[champ_index].state_dict(), self.args.aux_folder + '_best'+self.args.savetag)
 				print("Best policy saved with score", '%.2f'%max(all_fitness))
+				#print('111111111111111111') #cartpole也不會進這
 
 		else: #If there is no population, champion is just the actor from policy gradient learner
 			utils.hard_update(self.test_bucket[0], self.rollout_bucket[0])
-
 
 		###### TEST SCORE ######
 		if self.test_flag:
@@ -150,29 +154,42 @@ class ERL_Trainer:
 			test_scores = []
 			for pipe in self.test_result_pipes: #Collect all results
 				_, fitness, _, _ = pipe[1].recv()
+				#_, fitness, fr, traj = pipe[1].recv() #20220520 配合測試時選模型-若當天沒任何動作: fr=0,traj=280
 				self.best_score = max(self.best_score, fitness)
 				gen_max = max(gen_max, fitness)
 				test_scores.append(fitness)
+
 			test_scores = np.array(test_scores)
 			test_mean = np.mean(test_scores); test_std = (np.std(test_scores))
 			tracker.update([test_mean], self.total_frames)
-
+			#print('LLLLLLLLLLLLLLLLL  ',len(self.test_bucket))#長度均為1,內容為網路參數,經L137(champ_index=...)挑選出來
+			"""
+			if test_mean > 100:
+				f = open("./data/logfile.txt","a")
+				f.write('Gen: %d\t' % gen)
+				f.write("test_mean: %d\t" % test_mean)
+				f.write("test_std: %d\t" % test_std)
+				f.write("\n")
+				f.close()
+				fileN = './data/Gen-'+str(gen)+'.pth'
+				torch.save(self.test_bucket[0].state_dict(),fileN)
+			"""
 		else:
 			test_mean, test_std = None, None
 
 
 		#NeuroEvolution's probabilistic selection and recombination step
 		if self.args.pop_size > 1:
-			self.evolver.epoch(gen, self.population, all_fitness, self.rollout_bucket)
+			self.evolver.epoch(gen, self.population, all_fitness, self.rollout_bucket)#epoch- 算是EVO演算法的主程式
 
-		#Compute the champion's eplen
+		#Compute the champion's eplen #champ_len: 在MC開始為200
 		champ_len = all_eplens[all_fitness.index(max(all_fitness))] if self.args.pop_size > 1 else rollout_eplens[rollout_fitness.index(max(rollout_fitness))]
-
-
+		#在這輸出的gen_max是經過L118,L128,L154比較後的最大值
 		return gen_max, champ_len, all_eplens, test_mean, test_std, rollout_fitness, rollout_eplens
 
 
 	def train(self, frame_limit):
+		os.makedirs('./data/', exist_ok=True)
 		# Define Tracker class to track scores
 		test_tracker = utils.Tracker(self.args.savefolder, ['score_' + self.args.savetag], '.csv')  # Tracker class to log progress
 		time_start = time.time()
@@ -191,6 +208,7 @@ class ERL_Trainer:
 
 			if gen % 5 == 0:
 				print('Best_score_ever:''/','%.2f'%self.best_score, ' FPS:','%.2f'%(self.total_frames/(time.time()-time_start)), 'savetag', self.args.savetag)
+				print(' Time:','%.2f'%((time.time()-time_start)),' sec')
 				print()
 
 			if self.total_frames > frame_limit:
@@ -203,7 +221,3 @@ class ERL_Trainer:
 			for p in self.evo_task_pipes: p[0].send('TERMINATE')
 		except:
 			None
-
-
-
-
