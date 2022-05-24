@@ -207,12 +207,12 @@ class SSNE:
 		if num_elitists < 2: num_elitists = 2
 
 		# Entire epoch is handled with indices; Index rank nets by fitness evaluation (0 is the best after reversing)
-		index_rank = self.list_argsort(fitness_evals); index_rank.reverse()
+		index_rank = self.list_argsort(fitness_evals); index_rank.reverse() #將index的list排列後再反轉
 		elitist_index = index_rank[:num_elitists]  # Elitist indexes safeguard
 
 		# Selection step
 		offsprings = self.selection_tournament(index_rank, num_offsprings=len(index_rank) - len(elitist_index) - len(migration), tournament_size=3)
-
+		#offsprings為list,長度為4或6
 		#Figure out unselected candidates
 		unselects = []; new_elitists = []
 		for net_i in range(len(pop)):
@@ -272,7 +272,6 @@ class SSNE:
 			if net_i not in new_elitists:  # Spare the new elitists
 				if random.random() < self.args.mutation_prob:
 					self.mutate_inplace(pop[net_i])
-
 
 
 
