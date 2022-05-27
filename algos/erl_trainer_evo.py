@@ -103,6 +103,7 @@ class ERL_Trainer:
 			self.test_flag = False
 			test_scores = []
 			test_N = 0  #20220520
+			no_T = 0  #20220527
 			#infos = [] #20220523
 			for pipe in self.test_result_pipes: #Collect all results
 				#_, fitness, _, _ = pipe[1].recv()
@@ -112,12 +113,13 @@ class ERL_Trainer:
 				gen_max = max(gen_max, fitness)
 				test_scores.append(fitness)
 				if (abs(fitness) > 5) and (len(traj) < 200): test_N += 1  #20220520
+				if (abs(fitness) < 5): no_T += 1  #20220527
 			test_scores = np.array(test_scores)
 			test_mean = np.mean(test_scores); test_std = (np.std(test_scores))
 			tracker.update([test_mean], self.total_frames)
 			
-			#if test_mean > 100:
-			if test_N > 6:
+			if (test_N > 7) and (test_mean > 100) and (no_T > 2):
+			#if test_N > 6:
 				f = open("./data/logfile.txt","a")
 				f.write('Gen: %d\t' % gen)
 				f.write("test_N: %d\t" % test_N)
