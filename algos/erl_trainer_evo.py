@@ -78,6 +78,7 @@ class ERL_Trainer:
 		if self.args.pop_size > 1:
 			for i in range(self.args.pop_size):
 				s, fitness, frames, trajectory = self.evo_result_pipes[i][1].recv()
+				#if len(trajectory) > 200: fitness -= 5*len(trajectory)#20220530 縮短交易長度
 				all_fitness.append(fitness); all_eplens.append(frames)
 				self.gen_frames+= frames; self.total_frames += frames
 				self.best_score = max(self.best_score, fitness)
@@ -118,7 +119,7 @@ class ERL_Trainer:
 			test_mean = np.mean(test_scores); test_std = (np.std(test_scores))
 			tracker.update([test_mean], self.total_frames)
 			
-			if (test_N > 7) and (test_mean > 100) and (no_T > 2):
+			if (test_N > 7) and (no_T > 2):
 			#if test_N > 6:
 				f = open("./data/logfile.txt","a")
 				f.write('Gen: %d\t' % gen)
