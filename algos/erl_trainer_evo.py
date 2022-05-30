@@ -126,6 +126,7 @@ class ERL_Trainer:
 				f.write("test_N: %d\t" % test_N)
 				f.write("test_mean: %d\t" % test_mean)
 				f.write("test_std: %d\t" % test_std)
+				f.write("no_T: %d\t" % no_T)
 				#f.write("\n")#20220523
 				#f.write("infos: %s\t" % np.array(infos))#20220523
 				f.write("\n")
