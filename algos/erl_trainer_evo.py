@@ -1,4 +1,4 @@
-
+﻿
 import numpy as np, os, time, random, torch, sys
 from algos.neuroevolution import SSNE
 from core import utils
@@ -44,7 +44,7 @@ class ERL_Trainer:
 		self.test_task_pipes = [Pipe() for _ in range(args.num_test)]
 		self.test_result_pipes = [Pipe() for _ in range(args.num_test)]
 		#self.test_workers = [Process(target=rollout_worker, args=(id, 'test', self.test_task_pipes[id][1], self.test_result_pipes[id][0], False, self.test_bucket, env_constructor)) for id in range(args.num_test)]
-		#20220520 底�?一行�??�測試�??�模??
+		#20220520 底下一行配合測試時選模型
 		self.test_workers = [Process(target=rollout_worker, args=(id, 'test', self.test_task_pipes[id][1], self.test_result_pipes[id][0], True, self.test_bucket, env_constructor)) for id in range(args.num_test)]
 		for worker in self.test_workers: worker.start()
 		self.test_flag = False
@@ -65,7 +65,7 @@ class ERL_Trainer:
 		#Start Test rollouts
 		if gen % self.args.test_frequency == 0:
 			self.test_flag = True
-			for pipe in self.test_task_pipes: pipe[0].send(0) #20200520 pipe?�物件�?構為tuple- (connection, connection)
+			for pipe in self.test_task_pipes: pipe[0].send(0) #20200520 pipe的物件結構為tuple- (connection, connection)
 
 
 
@@ -78,7 +78,7 @@ class ERL_Trainer:
 		if self.args.pop_size > 1:
 			for i in range(self.args.pop_size):
 				s, fitness, frames, trajectory = self.evo_result_pipes[i][1].recv()
-				#if len(trajectory) > 200: fitness -= 5*len(trajectory)#20220530 縮短交�??�度
+				#if len(trajectory) > 200: fitness -= 10*len(trajectory)#20220530 縮短交易長度
 				all_fitness.append(fitness); all_eplens.append(frames)
 				self.gen_frames+= frames; self.total_frames += frames
 				self.best_score = max(self.best_score, fitness)
@@ -89,7 +89,7 @@ class ERL_Trainer:
 		############ FIGURE OUT THE CHAMP POLICY AND SYNC IT TO TEST #############
 		if self.args.pop_size > 1:
 			champ_index = all_fitness.index(max(all_fitness))
-			utils.hard_update(self.test_bucket[0], self.population[champ_index])#self.population[champ_index]?�網路�?�?f1,f2,val,adv)
+			utils.hard_update(self.test_bucket[0], self.population[champ_index])#self.population[champ_index]為網路結構(f1,f2,val,adv)
 			if max(all_fitness) > self.best_score:
 				self.best_score = max(all_fitness)
 				utils.hard_update(self.best_policy, self.population[champ_index])
@@ -108,7 +108,7 @@ class ERL_Trainer:
 			#infos = [] #20220523
 			for pipe in self.test_result_pipes: #Collect all results
 				#_, fitness, _, _ = pipe[1].recv()
-				_, fitness, fr, traj = pipe[1].recv() #20220520 ?��?測試?�選模�?-?�當天�?任�??��?: fr=0,traj=280
+				_, fitness, fr, traj = pipe[1].recv() #20220520 配合測試時選模型-若當天沒任何動作: fr=0,traj=280
 				#infos.append(traj[-1][5])#20220523
 				self.best_score = max(self.best_score, fitness)
 				gen_max = max(gen_max, fitness)
@@ -142,9 +142,9 @@ class ERL_Trainer:
 		if self.args.pop_size > 1:
 			self.evolver.epoch(gen, self.population, all_fitness)
 
-		#Compute the champion's eplen #champ_len: ?�MC?��???00
+		#Compute the champion's eplen #champ_len: 在MC開始為200
 		champ_len = all_eplens[all_fitness.index(max(all_fitness))]
-		#?�這輸?��?gen_max?��??�L118,L128,L154比�?後�??�大�?
+		#在這輸出的gen_max是經過L118,L128,L154比較後的最大值
 		return gen_max, champ_len, all_eplens, test_mean, test_std
 
 
