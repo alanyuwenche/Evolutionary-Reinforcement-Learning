@@ -22,6 +22,7 @@ class DDQN(object):
         self.log_softmax = torch.nn.LogSoftmax(dim=1)
         self.softmax = torch.nn.Softmax(dim=1)
         self.num_updates = 0
+        #self.gtM = 0. #20220619 最大梯度絕對值
 
     def update_parameters(self, state_batch, next_state_batch, action_batch, reward_batch, done_batch):
 
@@ -54,6 +55,13 @@ class DDQN(object):
 
         self.actor_optim.zero_grad()
         q_loss.backward()
+        """
+        ##20220619 最大梯度絕對值
+        if torch.max(torch.abs((self.actor.adv.weight.grad))) > self.gtM:
+          self.gtM = torch.max(torch.abs((self.actor.adv.weight.grad)))
+        elif torch.max(torch.abs((self.actor.adv.bias.grad))) > self.gtM:
+          self.gtM = torch.max(torch.abs((self.actor.adv.bias.grad)))
+        """
         self.actor_optim.step()
 
         self.num_updates += 1
