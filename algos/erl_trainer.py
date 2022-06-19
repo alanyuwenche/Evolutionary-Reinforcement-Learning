@@ -1,4 +1,4 @@
-﻿
+
 import numpy as np, os, time, random, torch, sys
 from algos.neuroevolution import SSNE
 from core import utils
@@ -103,7 +103,7 @@ class ERL_Trainer:
 			for _ in range(int(self.gen_frames * self.args.gradperstep)):
 				s, ns, a, r, done = self.replay_buffer.sample(self.args.batch_size)
 				self.learner.update_parameters(s, ns, a, r, done)
-
+			#print('LLLLLLLLLLLL106 gtM(最大梯度絕對值): ',self.learner.gtM)#20220619
 			self.gen_frames = 0
 
 
