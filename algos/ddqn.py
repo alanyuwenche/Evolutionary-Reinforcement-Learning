@@ -23,7 +23,7 @@ class DDQN(object):
         self.softmax = torch.nn.Softmax(dim=1)
         self.num_updates = 0
         #self.gtM = 0. #20220619 最大梯度絕對值
-
+        #self.lossAcc = [] #20220622 loss趨勢
     def update_parameters(self, state_batch, next_state_batch, action_batch, reward_batch, done_batch):
 
         state_batch = state_batch.to(self.device)
@@ -51,6 +51,7 @@ class DDQN(object):
         q_loss = (next_q_value - q_val)**2
         q_loss -= self.alpha*entropy
         q_loss = q_loss.mean()
+        #self.lossAcc.append(q_loss.item()/state_batch.shape[0]) #20220622 loss趨勢
         #print('LLLLLL  L54 q_loss/batch_size: ',q_loss.item()/state_batch.shape[0])#20220621 q_loss/每epoch(與batch_size無關)
         #該值還必須傳送出去才能顯示趨勢; batch_size由--batchsize設定
         self.actor_optim.zero_grad()
