@@ -99,13 +99,13 @@ class ERL_Trainer:
 
 
 		############# UPDATE PARAMS USING GRADIENT DESCENT ##########
-		if self.replay_buffer.__len__() > self.args.learning_start: ###BURN IN PERIOD
+		if self.replay_buffer.__len__() > self.args.learning_start: # learning_start原始設定值為5000,但replay_buffer從一開始就存值,因此輸出的Frames值即是跑過的epoch
 			for _ in range(int(self.gen_frames * self.args.gradperstep)):
 				s, ns, a, r, done = self.replay_buffer.sample(self.args.batch_size)
 				self.learner.update_parameters(s, ns, a, r, done)
 			#print('LLLLLLLLLLLL106 gtM(最大梯度絕對值): ',self.learner.gtM)#20220619
 			self.gen_frames = 0
-
+			#print('LLLL L108 self.learner.lossAcc',len(self.learner.lossAcc)) #20220622 loss趨勢
 
 		########## JOIN ROLLOUTS FOR EVO POPULATION ############
 		all_fitness = []; all_eplens = []
@@ -210,7 +210,12 @@ class ERL_Trainer:
 				print('Best_score_ever:''/','%.2f'%self.best_score, ' FPS:','%.2f'%(self.total_frames/(time.time()-time_start)), 'savetag', self.args.savetag)
 				print(' Time:','%.2f'%((time.time()-time_start)),' sec')
 				print()
-
+			"""
+			#20220622 loss趨勢
+			if gen % 20 == 0:
+				fileN = 'Loss_'+str(gen)+'.csv'
+				np.savetxt(fileN, np.array(self.learner.lossAcc) ,delimiter=",",fmt='%.6f')#輸出的Frames值即是跑過的epoch數目
+			"""
 			if self.total_frames > frame_limit:
 				break
 
