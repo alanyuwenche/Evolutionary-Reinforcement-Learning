@@ -24,6 +24,7 @@ class DDQN(object):
         self.num_updates = 0
         #self.gtM = 0. #20220619 最大梯度絕對值
         #self.lossAcc = [] #20220622 loss趨勢
+
     def update_parameters(self, state_batch, next_state_batch, action_batch, reward_batch, done_batch):
 
         state_batch = state_batch.to(self.device)
@@ -60,8 +61,9 @@ class DDQN(object):
         """
         ##20220623 梯度裁剪       
         for param in self.actor.parameters():
-          param.grad.data.clamp_(-1, 1)     
-        
+          param.grad.data.clamp_(-1, 1)
+
+        torch.nn.utils.clip_grad_norm_(parameters=self.actor.parameters(), max_norm=10)#20220628 对一组可迭代(网络)参数的梯度范数进行裁剪。https://blog.csdn.net/Mikeyboi/article/details/119522689        
         ##20220619 最大梯度絕對值
         if torch.max(torch.abs((self.actor.adv.weight.grad))) > self.gtM:
           self.gtM = torch.max(torch.abs((self.actor.adv.weight.grad)))
