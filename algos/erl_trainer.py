@@ -66,9 +66,9 @@ class ERL_Trainer:
 		# Test workers
 		self.test_task_pipes = [Pipe() for _ in range(args.num_test)]
 		self.test_result_pipes = [Pipe() for _ in range(args.num_test)]
-		self.test_workers = [Process(target=rollout_worker, args=(id, 'test', self.test_task_pipes[id][1], self.test_result_pipes[id][0], False, self.test_bucket, env_constructor)) for id in range(args.num_test)]
+		#self.test_workers = [Process(target=rollout_worker, args=(id, 'test', self.test_task_pipes[id][1], self.test_result_pipes[id][0], False, self.test_bucket, env_constructor)) for id in range(args.num_test)]
 		#20220520 底下一行配合測試時選模型
-		#self.test_workers = [Process(target=rollout_worker, args=(id, 'test', self.test_task_pipes[id][1], self.test_result_pipes[id][0], True, self.test_bucket, env_constructor)) for id in range(args.num_test)]
+		self.test_workers = [Process(target=rollout_worker, args=(id, 'test', self.test_task_pipes[id][1], self.test_result_pipes[id][0], True, self.test_bucket, env_constructor)) for id in range(args.num_test)]
 		for worker in self.test_workers: worker.start()
 		self.test_flag = False
 
@@ -152,28 +152,37 @@ class ERL_Trainer:
 		if self.test_flag:
 			self.test_flag = False
 			test_scores = []
+			test_N = 0  #有交易且長度小於200 20220520
+			no_T = 0  #無交易次數 20220527
+			#infos = [] #20220523
 			for pipe in self.test_result_pipes: #Collect all results
-				_, fitness, _, _ = pipe[1].recv()
-				#_, fitness, fr, traj = pipe[1].recv() #20220520 配合測試時選模型-若當天沒任何動作: fr=0,traj=280
+				#_, fitness, _, _ = pipe[1].recv()
+				_, fitness, fr, traj = pipe[1].recv() #20220520 配合測試時選模型-若當天沒任何動作: fitness=0,traj=280
+				#infos.append(traj[-1][5])#20220523
 				self.best_score = max(self.best_score, fitness)
 				gen_max = max(gen_max, fitness)
 				test_scores.append(fitness)
-
+				if (abs(fitness) > 5) and (len(traj) < 200): test_N += 1  #20220520
+				if (abs(fitness) < 5) and (len(traj) > 260): no_T += 1  #20220618, 20220527
 			test_scores = np.array(test_scores)
 			test_mean = np.mean(test_scores); test_std = (np.std(test_scores))
 			tracker.update([test_mean], self.total_frames)
-			#print('LLLLLLLLLLLLLLLLL  ',len(self.test_bucket))#長度均為1,內容為網路參數,經L137(champ_index=...)挑選出來
-			"""
-			if test_mean > 100:
+			
+			if (test_N > 4) and (no_T > 1):
+			#if test_N > 6:
 				f = open("./data/logfile.txt","a")
 				f.write('Gen: %d\t' % gen)
+				f.write("test_N: %d\t" % test_N)
 				f.write("test_mean: %d\t" % test_mean)
 				f.write("test_std: %d\t" % test_std)
+				f.write("no_T: %d\t" % no_T)
+				#f.write("\n")#20220523
+				#f.write("infos: %s\t" % np.array(infos))#20220523
 				f.write("\n")
 				f.close()
 				fileN = './data/Gen-'+str(gen)+'.pth'
 				torch.save(self.test_bucket[0].state_dict(),fileN)
-			"""
+
 		else:
 			test_mean, test_std = None, None
 
