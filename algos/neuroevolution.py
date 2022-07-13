@@ -202,7 +202,6 @@ class SSNE:
 
 	def epoch(self, gen, pop, fitness_evals, migration):
 
-
 		self.gen+= 1; num_elitists = int(self.args.elite_fraction * len(fitness_evals))
 		if num_elitists < 2: num_elitists = 2
 
@@ -241,6 +240,14 @@ class SSNE:
 			replacee = unselects.pop(0)
 			utils.hard_update(target=pop[replacee], source=policy)
 			self.rl_policy = replacee
+		"""
+		#20220713 減低DDQN的作用
+		if self.gen % 10 == 0:
+			for policy in migration:
+				replacee = unselects.pop(0)
+				utils.hard_update(target=pop[replacee], source=policy)
+				self.rl_policy = replacee
+		"""
 
 		# Elitism step, assigning elite candidates to some unselects
 		for i in elitist_index:
