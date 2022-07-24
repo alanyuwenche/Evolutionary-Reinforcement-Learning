@@ -31,7 +31,9 @@ class ERL_Trainer:
 		#PG Learner
 		if env_constructor.is_discrete:
 			from algos.ddqn import DDQN
+			#from algos.dqn import DQN #My Code_DQN
 			self.learner = DDQN(args, model_constructor)
+			#self.learner = DQN(args, model_constructor) #My Code_DQN
 		else:
 			from algos.sac import SAC
 			self.learner = SAC(args, model_constructor)
