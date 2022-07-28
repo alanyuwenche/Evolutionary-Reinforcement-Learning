@@ -169,7 +169,7 @@ class ERL_Trainer:
 			test_scores = np.array(test_scores)
 			test_mean = np.mean(test_scores); test_std = (np.std(test_scores))
 			tracker.update([test_mean], self.total_frames)
-			
+
 			if (test_N > 4) and (no_T > 1):
 			#if test_N > 6:
 				f = open("./data/logfile.txt","a")
@@ -184,10 +184,27 @@ class ERL_Trainer:
 				f.close()
 				fileN = './data/Gen-'+str(gen)+'.pth'
 				torch.save(self.test_bucket[0].state_dict(),fileN)
-
 		else:
 			test_mean, test_std = None, None
-
+		"""
+		###### TEST SCORE-原程式可用於MC ######
+		if self.test_flag:
+			self.test_flag = False
+			test_scores = []
+			for pipe in self.test_result_pipes: #Collect all results
+				_, fitness, _, _ = pipe[1].recv()
+				self.best_score = max(self.best_score, fitness)
+				gen_max = max(gen_max, fitness)
+				test_scores.append(fitness)
+			test_scores = np.array(test_scores)
+			test_mean = np.mean(test_scores); test_std = (np.std(test_scores))
+			tracker.update([test_mean], self.total_frames)
+			if fitness > -110:
+				fileN = './data/Gen(MC)-'+str(gen)+'.pth'
+				torch.save(self.test_bucket[0].state_dict(),fileN)
+		else:
+			test_mean, test_std = None, None
+		"""
 
 		#NeuroEvolution's probabilistic selection and recombination step
 		if self.args.pop_size > 1:
