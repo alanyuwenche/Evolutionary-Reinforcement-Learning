@@ -4,7 +4,7 @@ import torch.nn.functional as F
 from torch.optim import Adam
 from core.utils import soft_update, hard_update
 
-
+# 須同時修改 erl_trainer.py, 梯度裁剪(?)
 class DQN(object):
     def __init__(self, args, model_constructor):
 
