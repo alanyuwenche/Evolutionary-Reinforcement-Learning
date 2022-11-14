@@ -39,7 +39,7 @@ class DDQN(object):
             _, _, ns_logits = self.actor_target.noisy_action(next_state_batch, return_only_action=False)
             next_entropy = -(F.softmax(ns_logits, dim=1) * F.log_softmax(ns_logits, dim=1)).mean(1).unsqueeze(1)
 
-            ns_logits = ns_logits.gather(1, na.unsqueeze(1))
+            ns_logits = ns_logits.gather(1, na.unsqueeze(1))#20221114 取出action相應的對數機率
 
             next_target = ns_logits + self.alpha * next_entropy
             next_q_value = reward_batch + (1-done_batch) * self.gamma * next_target
