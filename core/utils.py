@@ -261,8 +261,19 @@ def load_all_models_dir(dir, model_template):
     return models
 
 
+def disc_Reward(self, traj):#My Code- 20221224_使用discounted reward
+    trajL = len(traj)
+    R = []
+    trajN = []
+    discounted_reward = 0
+    for i in reversed(range(trajL)):
+      discounted_reward = traj[i][3][0][0] + (self.gamma * discounted_reward)
+      R.insert(0, discounted_reward)
 
+    for j in range(trajL):
+      trajN.append([traj[j][0],traj[j][1],traj[j][2],np.array(R[j],dtype=np.float32).reshape(1,1),traj[j][4]])
 
+    return trajN
 
 
 
