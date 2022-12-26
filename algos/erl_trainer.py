@@ -6,7 +6,7 @@ from core.runner import rollout_worker
 from torch.multiprocessing import Process, Pipe, Manager
 from core.buffer import Buffer
 import torch
-
+#from core.utils import disc_Reward #20221224 使用discounted reward-本檔須改三行
 
 class ERL_Trainer:
 
@@ -117,6 +117,7 @@ class ERL_Trainer:
 				#print('LLL  L113: ',trajectory[199][0][0,0])#trajectory[199]為MC未成功的最後一筆軌跡紀錄,應該可用此點改變fitness
 				#fitness += 100*trajectory[-1][0][0,0] #可使Gen_max_score提前, 但Champ_len卻延後
 				#if len(trajectory) > 200: fitness -= 5*len(trajectory)#My Code- 無法縮短交易長度_20220518
+				#trajectory = disc_Reward(self.args, trajectory)#20221224 使用discounted reward
 				all_fitness.append(fitness); all_eplens.append(frames)
 				self.gen_frames+= frames; self.total_frames += frames
 				self.replay_buffer.add(trajectory)
@@ -128,6 +129,7 @@ class ERL_Trainer:
 		if self.args.rollout_size > 0:
 			for i in range(self.args.rollout_size):
 				_, fitness, pg_frames, trajectory = self.result_pipes[i][1].recv()
+				#trajectory = disc_Reward(self.args, trajectory)#20221224 使用discounted reward
 				self.replay_buffer.add(trajectory)
 				self.gen_frames += pg_frames; self.total_frames += pg_frames
 				self.best_score = max(self.best_score, fitness)
