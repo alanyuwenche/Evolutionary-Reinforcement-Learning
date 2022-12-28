@@ -26,6 +26,8 @@ class ERL_Trainer:
 
 		#Save best policy
 		self.best_policy = model_constructor.make_model(self.policy_string)
+		#state_dict = torch.load('/content/Evolutionary-Reinforcement-Learning/ppoS-113400.pth')
+		#self.best_policy.load_state_dict(state_dict)#20221228 載入預先訓練的模型
 
 
 		############## MULTIPROCESSING TOOLS ###################
