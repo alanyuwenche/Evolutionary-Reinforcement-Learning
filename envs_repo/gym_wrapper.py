@@ -1,4 +1,4 @@
-
+#20231126 新環境(new Reward Function)
 import numpy as np
 import gym
 import pickle
@@ -46,7 +46,7 @@ for i in range(dataN):
             pp[s,i] = data[i][0].iloc[s,1]
         symBe = sym
         base = data[i][0].iloc[l-1,1]  
-
+#print('pppppppppppppppp  ',data[366][0].iloc[:20,:])
 ss, _, _ = standardScale(ss)
 pp, _, _ = standardScale(pp)
 window_size = 4
@@ -67,6 +67,8 @@ class GymWrapper(gym.Env):
       self.t = 0 # time
       self.st = 0 # tradin time
       self.done = False
+      ##################################################### NEW_20231117
+      self.unrealized_profit = 0
 
   def is_discrete(self, env):
         try:
@@ -83,29 +85,46 @@ class GymWrapper(gym.Env):
 
   def _take_action(self, action):
       reward = 0
-      if action == 1:
+      if action == 1:#BUY
           if int(self.position[0]) == 0:
               self.position = np.array([1.])
               self.inventory.append(self.price[self.d][0].iloc[self.t-1,1])
               self.st = self.t # tradin time
-
-          if int(self.position[0]) == -1:
+              reward = -self.commission #20231124
+          elif int(self.position[0]) == 1:# NEW_20231117
+              self.unrealized_profit += 50*(self.price[self.d][0].iloc[self.t-1,1]-self.price[self.d][0].iloc[self.st-1,1])
+              reward = self.unrealized_profit*0.3 -50 #未實現盈虧(折現)+處罰不正確指令
+          elif int(self.position[0]) == -1:
               sold_price = self.inventory.pop(0)
-              reward = 50*(sold_price - self.price[self.d][0].iloc[self.t-1,1])-2*self.commission
               self.done = True
               self.position = np.array([0.])
-      elif action == 2:
+              reward = 50*(sold_price - self.price[self.d][0].iloc[self.t-1,1])-self.commission #20231124
+
+      elif action == 2:#SELL
           if int(self.position[0]) == 0:
               self.position = np.array([-1.])
               self.inventory.append(self.price[self.d][0].iloc[self.t-1,1])
               self.st = self.t # tradin time
-
-          if int(self.position[0]) == 1:
+              reward = -self.commission #20231124
+          elif int(self.position[0]) == 1:
               bought_price = self.inventory.pop(0)
-              reward = 50*(self.price[self.d][0].iloc[self.t-1,1] - bought_price)-2*self.commission
+              reward = 50*(self.price[self.d][0].iloc[self.t-1,1] - bought_price)-self.commission #20231124
               self.done = True
               self.position = np.array([0.])
-       
+          elif int(self.position[0]) == -1: 
+              self.unrealized_profit += 50*(self.price[self.d][0].iloc[self.st-1,1]-self.price[self.d][0].iloc[self.t-1,1])
+              reward = self.unrealized_profit*0.3 -50 #未實現盈虧(折現)+處罰不正確指令
+
+      elif action == 0:#HOLD
+          if int(self.position[0]) == 0:
+              reward = -50 #太消極=> 扣1點
+          elif int(self.position[0]) == 1:
+              self.unrealized_profit += 50*(self.price[self.d][0].iloc[self.t-1,1]-self.price[self.d][0].iloc[self.st-1,1])
+              reward = self.unrealized_profit*0.3 #未實現盈虧(折現)
+          elif int(self.position[0]) == -1:
+              self.unrealized_profit += 50*(self.price[self.d][0].iloc[self.st-1,1]-self.price[self.d][0].iloc[self.t-1,1])
+              reward = self.unrealized_profit*0.3 #未實現盈虧(折現)
+
       return reward, self.position
 
   def step(self, action):
@@ -118,13 +137,13 @@ class GymWrapper(gym.Env):
           if len(self.inventory) > 0:
               if int(self.position[0]) == 1:
                   bought_price = self.inventory.pop(0)
-                  reward = 50*(self.price[self.d][0].iloc[self.t-1,1] - bought_price)-2*self.commission
+                  reward = 50*(self.price[self.d][0].iloc[self.t-1,1] - bought_price)-self.commission #20231124
                   #observation[self.state_dim+1] = np.array([0.])
                   observation[5] = np.array([0.])#20220509
 
               elif int(self.position[0]) == -1:
                   sold_price = self.inventory.pop(0)
-                  reward = 50*(sold_price - self.price[self.d][0].iloc[self.t-1,1])-2*self.commission
+                  reward = 50*(sold_price - self.price[self.d][0].iloc[self.t-1,1])-self.commission #20231124
                   #observation[self.state_dim+1] = np.array([0.])
                   observation[5] = np.array([0.])#20220509
       info = {'env.d':self.d, 'env.t':self.t, 'reward':reward, 'tradein t':self.st}
@@ -140,6 +159,7 @@ class GymWrapper(gym.Env):
       self.t = 4 # time
       self.st = 4 # tradin time
       self.done = False
+      self.unrealized_profit = 0
 
       return self.getStateTv() 
 
