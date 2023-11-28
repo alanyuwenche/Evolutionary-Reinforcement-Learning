@@ -115,13 +115,13 @@ class ERL_Trainer:
 				self.best_score = max(self.best_score, fitness)
 				gen_max = max(gen_max, fitness)
 				test_scores.append(fitness)
-				if (abs(fitness) > 5) and (len(traj) < 200): test_N += 1  #20220520
-				if (abs(fitness) < 5) and (len(traj) > 260): no_T += 1  #20220618, 20220527
+				if fr < 200: test_N += 1 #20231128 長度小於200_一定有交易
+				if traj[-1][0][0,-1] == 0: no_T += 1  #20231128 無交易次數-state的最後一個=>部位
+				test_scores.append(fitness)
 			test_scores = np.array(test_scores)
 			test_mean = np.mean(test_scores); test_std = (np.std(test_scores))
 			tracker.update([test_mean], self.total_frames)
-			
-			if (test_N > 4) and (no_T > 1):
+			if (test_N > 4) and (no_T > 0):
 			#if test_N > 6:
 				f = open("./data/logfile.txt","a")
 				f.write('Gen: %d\t' % gen)
