@@ -121,6 +121,7 @@ class ERL_Trainer:
 			test_scores = np.array(test_scores)
 			test_mean = np.mean(test_scores); test_std = (np.std(test_scores))
 			tracker.update([test_mean], self.total_frames)
+			print('$$$$$$$$$$$$$$$$$  test_N: ',test_N, ' no_T: ',no_T)
 			if (test_N > 4) and (no_T > 0):
 			#if test_N > 6:
 				f = open("./data/logfile.txt","a")
