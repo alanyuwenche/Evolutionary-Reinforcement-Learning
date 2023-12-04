@@ -5,6 +5,7 @@ from core import utils
 from core.runner import rollout_worker
 from torch.multiprocessing import Process, Pipe, Manager
 import torch
+import copy
 
 
 class ERL_Trainer:
@@ -65,7 +66,9 @@ class ERL_Trainer:
 				self.evo_task_pipes[id][0].send(id)
 
 		#Start Test rollouts
-		if gen % self.args.test_frequency == 0:
+		test_old = copy.deepcopy(self.test_bucket[0]) #20231204
+		#print('@@@@@@@@@@@@@@@@@111 ',test_old._modules['adv'].bias.detach().numpy())        
+		if gen % self.args.test_frequency == 0:#args.test_frequency=1
 			self.test_flag = True
 			for pipe in self.test_task_pipes: pipe[0].send(0) #20200520 pipe的物件結構為tuple- (connection, connection)
 
@@ -121,9 +124,8 @@ class ERL_Trainer:
 			test_scores = np.array(test_scores)
 			test_mean = np.mean(test_scores); test_std = (np.std(test_scores))
 			tracker.update([test_mean], self.total_frames)
-			print('$$$$$$$$$$$$$$$$$  test_N: ',test_N, ' no_T: ',no_T)
 			if (test_N > 4) and (no_T > 0):
-			#if test_N > 6:
+			#if no_T > 4:
 				f = open("./data/logfile.txt","a")
 				f.write('Gen: %d\t' % gen)
 				f.write("test_N: %d\t" % test_N)
@@ -135,7 +137,7 @@ class ERL_Trainer:
 				f.write("\n")
 				f.close()
 				fileN = './data/Gen-'+str(gen)+'.pth'
-				torch.save(self.test_bucket[0].state_dict(),fileN)
+				torch.save(test_old.state_dict(),fileN)#20231204
 			
 		else:
 			test_mean, test_std = None, None
