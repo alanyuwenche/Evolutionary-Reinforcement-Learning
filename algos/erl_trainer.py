@@ -6,6 +6,7 @@ from core.runner import rollout_worker
 from torch.multiprocessing import Process, Pipe, Manager
 from core.buffer import Buffer
 import torch
+import copy
 #from core.utils import disc_Reward #20221224 使用discounted reward-本檔須改三行
 
 class ERL_Trainer:
