@@ -95,7 +95,9 @@ class ERL_Trainer:
 		self.learner.actor.to(device=self.device)
 
 		#Start Test rollouts
-		if gen % self.args.test_frequency == 0:
+		test_old = copy.deepcopy(self.test_bucket[0]) #20231204
+		#print('@@@@@@@@@@@@@@@@@111 ',test_old._modules['adv'].bias.detach().numpy()) 
+		if gen % self.args.test_frequency == 0:#args.test_frequency=1
 			self.test_flag = True
 			for pipe in self.test_task_pipes: pipe[0].send(0) #20200520 pipe的物件結構為tuple- (connection, connection)
 
@@ -166,13 +168,15 @@ class ERL_Trainer:
 				self.best_score = max(self.best_score, fitness)
 				gen_max = max(gen_max, fitness)
 				test_scores.append(fitness)
-				if (abs(fitness) > 5) and (len(traj) < 200): test_N += 1  #20220520
-				if (abs(fitness) < 5) and (len(traj) > 260): no_T += 1  #20220618, 20220527
+				if fr < 200: test_N += 1 #20231128 長度小於200_一定有交易
+				if traj[-1][0][0,-1] == 0: no_T += 1  #20231128 無交易次數-state的最後一個=>部位
+				#if (abs(fitness) > 5) and (len(traj) < 200): test_N += 1  #20220520
+				#if (abs(fitness) < 5) and (len(traj) > 260): no_T += 1  #20220618, 20220527
 			test_scores = np.array(test_scores)
 			test_mean = np.mean(test_scores); test_std = (np.std(test_scores))
 			tracker.update([test_mean], self.total_frames)
 
-			if (test_N > 4) and (no_T > 1):#以 num_test=10 為基準
+			if (test_N > 4) and (no_T > 0):#以 num_test=10 為基準
 			#if test_N > 6:
 				f = open("./data/logfile.txt","a")
 				f.write('Gen: %d\t' % gen)
@@ -185,7 +189,8 @@ class ERL_Trainer:
 				f.write("\n")
 				f.close()
 				fileN = './data/Gen-'+str(gen)+'.pth'
-				torch.save(self.test_bucket[0].state_dict(),fileN)
+				torch.save(test_old.state_dict(),fileN)#20231204
+				#torch.save(self.test_bucket[0].state_dict(),fileN)
 		else:
 			test_mean, test_std = None, None
 		"""
